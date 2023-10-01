@@ -1,18 +1,46 @@
-import { STATUS_CODES, IncomingMessage, IncomingHttpHeaders } from 'node:http'
+import {
+  STATUS_CODES,
+  ClientRequest,
+  IncomingMessage,
+  IncomingHttpHeaders,
+  OutgoingHttpHeaders,
+} from 'node:http'
 import { invariant } from 'outvariant'
 import { DeferredPromise } from '@open-draft/deferred-promise'
+import { PassThrough, Readable, Writable } from 'node:stream'
 
 export type RawHeaders = Record<string, string>
 
 export class HttpMessage {
   static httpVersion = 'HTTP/1.0'
 
-  static async fromRequest(request: Request): Promise<HttpMessage> {
-    const startLine = `${request.method} ${request.url} ${HttpMessage.httpVersion}`
-    const headers = Object.fromEntries(request.headers.entries())
-    const body = await extractFetchBody(request)
+  static async fromRequest(
+    request: Request | ClientRequest
+  ): Promise<HttpMessage> {
+    if (request instanceof Request) {
+      const startLine = `${request.method} ${request.url} ${HttpMessage.httpVersion}`
+      const headers = Object.fromEntries(request.headers.entries())
+      const body = await extractFetchBody(request)
 
-    return new HttpMessage(startLine, headers, body)
+      return new HttpMessage(startLine, headers, body)
+    }
+
+    if (request instanceof ClientRequest) {
+      const startLine = `${request.method} ??? ${HttpMessage.httpVersion}`
+      const headers = headersFromOutgoingHttpHeaders(request.getHeaders())
+      const body = await extractWritableBody(request)
+
+      return new HttpMessage(startLine, headers, body)
+    }
+
+    invariant(
+      false,
+      'Failed to create HTTP message from request: expected a Fetch API Request instance or http.ClientRequest but got %s',
+      request != null
+        ? // @ts-expect-error
+          request.constructor?.name
+        : typeof request
+    )
   }
 
   static async fromResponse(
@@ -36,7 +64,7 @@ export class HttpMessage {
       const httpVersion = response.httpVersion || HttpMessage.httpVersion
       const startLine = `${httpVersion} ${status} ${statusText}`
       const headers = headersFromIncomingHttpHeaders(response.headers)
-      const body = await extractHttpIncomingMessageBody(response)
+      const body = await extractReadableBody(response)
 
       return new HttpMessage(startLine, headers, body)
     }
@@ -165,6 +193,25 @@ function toHeaderLines(rawHeaders: RawHeaders): Array<string> {
   return lines
 }
 
+function headersFromOutgoingHttpHeaders(
+  headers: OutgoingHttpHeaders
+): RawHeaders {
+  const result: RawHeaders = {}
+
+  for (const [name, value] of Object.entries(headers)) {
+    if (typeof value === 'undefined') {
+      continue
+    }
+
+    const resolvedValue = Array.isArray(value)
+      ? value.map((value) => value.toString()).join(', ')
+      : value.toString()
+    result[name] = resolvedValue
+  }
+
+  return result
+}
+
 function headersFromIncomingHttpHeaders(
   headers: IncomingHttpHeaders
 ): RawHeaders {
@@ -195,24 +242,45 @@ async function extractFetchBody(
   return instance.text()
 }
 
-async function extractHttpIncomingMessageBody(
-  message: IncomingMessage
+async function extractReadableBody(
+  readable: Readable
 ): Promise<string | undefined> {
-  const responseBodyPromise = new DeferredPromise<string | undefined>()
+  const bodyPromise = new DeferredPromise<string | undefined>()
   const chunks: Array<Buffer> = []
 
   invariant(
-    message.readable,
+    readable.readable,
     'Failed to read the body of IncomingMessage: message already read'
   )
 
-  message.on('data', (chunk) => chunks.push(chunk))
-  message.on('error', (error) => responseBodyPromise.reject(error))
-  message.on('end', () => {
+  readable.on('data', (chunk) => chunks.push(chunk))
+  readable.on('error', (error) => bodyPromise.reject(error))
+  readable.on('end', () => {
     const text =
       chunks.length === 0 ? undefined : Buffer.concat(chunks).toString('utf8')
-    responseBodyPromise.resolve(text)
+    bodyPromise.resolve(text)
   })
 
-  return responseBodyPromise
+  return bodyPromise
+}
+
+async function extractWritableBody(
+  writable: Writable
+): Promise<string | undefined> {
+  const bodyPromise = new DeferredPromise<string | undefined>()
+  const chunks: Array<Buffer> = []
+
+  writable._write = (chunk, encoding, next) => {
+    console.log({ chunk, encoding })
+    next()
+  }
+
+  writable.on('error', (error) => bodyPromise.reject(error))
+  writable.on('finish', () => {
+    const text =
+      chunks.length === 0 ? undefined : Buffer.concat(chunks).toString('utf8')
+    bodyPromise.resolve(text)
+  })
+
+  return bodyPromise
 }

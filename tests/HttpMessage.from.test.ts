@@ -1,8 +1,9 @@
-import { IncomingMessage } from 'node:http'
+import * as http from 'node:http'
+import * as https from 'node:https'
 import { HttpMessage } from '../src/HttpMessage.js'
 import { Socket } from 'node:net'
 
-describe('from(Request)', () => {
+describe('fromRequest(Request)', () => {
   it('returns http message for a GET request', async () => {
     const message = await HttpMessage.fromRequest(
       new Request('https://example.com')
@@ -62,7 +63,28 @@ describe('from(Request)', () => {
   })
 })
 
-describe('from(Response)', () => {
+describe.only('fromRequest(ClientRequest)', () => {
+  it('returns http message for a GET request', async () => {
+    const request = https.get('https://example.com')
+
+    const message = await HttpMessage.fromRequest(request)
+
+    expect(message.toString()).toBe('GET https://example.com/ HTTP/1.0\r\n')
+  })
+
+  it('returns http message for a POST request', async () => {
+    const request = https.request('https://example.com', {
+      method: 'POST',
+    })
+    request.write('request')
+    request.end('payload')
+
+    const message = await HttpMessage.fromRequest(request)
+    expect(message.toString()).toBe(`foo`)
+  })
+})
+
+describe('fromResponse(Response)', () => {
   it('returns http message for an empty 200 OK response', async () => {
     const message = await HttpMessage.fromResponse(new Response())
 
@@ -149,7 +171,7 @@ describe('from(Response)', () => {
 
 describe('fromResponse(IncomingMessage)', () => {
   it('returns http message for an empty 200 OK response', async () => {
-    const response = new IncomingMessage(new Socket())
+    const response = new http.IncomingMessage(new Socket())
     response.push(null)
     const message = await HttpMessage.fromResponse(response)
 
@@ -162,7 +184,7 @@ describe('fromResponse(IncomingMessage)', () => {
   })
 
   it('returns http message for response with headers', async () => {
-    const response = new IncomingMessage(new Socket())
+    const response = new http.IncomingMessage(new Socket())
     response.headers['ContenT-TypE'] = 'application/json'
     response.headers['x-custom-header'] = 'Value'
     response.push(null)
@@ -181,7 +203,7 @@ describe('fromResponse(IncomingMessage)', () => {
   })
 
   it('returns http message for response with text body', async () => {
-    const response = new IncomingMessage(new Socket())
+    const response = new http.IncomingMessage(new Socket())
     response.headers['content-type'] = 'text/plain;charset=UTF-8'
     response.push('Hello')
     response.push(' ')
@@ -201,7 +223,7 @@ describe('fromResponse(IncomingMessage)', () => {
   })
 
   it('returns http message for response with JSON body', async () => {
-    const response = new IncomingMessage(new Socket())
+    const response = new http.IncomingMessage(new Socket())
     response.headers['content-type'] = 'application/json'
     response.push('{"id":')
     response.push('1,')
