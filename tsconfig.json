@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "skipLibCheck": true,
+    "target": "es2015",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "noEmit": true,
+    "declaration": false
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "build"]
+}
