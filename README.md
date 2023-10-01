@@ -14,9 +14,11 @@ npm install @har-tools/http-message
 
 Creates a new HTTP message from the given start line, heades, and optional body.
 
-### `HttpMessage.from(request)`
+### `HttpMessage.fromRequest(request)`
 
-Creates a new HTTP message from the given Fetch API `Request` instance.
+- `request: Request`
+
+Creates a new HTTP message from the given request instance.
 
 ```js
 const request = new Request('https://example.com', {
@@ -32,9 +34,11 @@ console.log(message)
 // Hello world!
 ```
 
-### `HttpMessage.from(response)`
+### `HttpMessage.fromResponse(response)`
 
-Creates a new HTTP message from the given Fetch API `Respnse` instance.
+- `response: Response | http.IncomingMessage`
+
+Creates a new HTTP message from the given response instane.
 
 ```js
 const response = new Response(
@@ -59,3 +63,5 @@ console.log(message)
 //
 // {"id":1,"name":"John"}
 ```
+
+> Make sure to _clone the response_ before passing it to the `.fromResponse()` method. This method reads the response body.
