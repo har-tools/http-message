@@ -8,7 +8,8 @@
   "scripts": {
     "build": "tsc -p ./tsconfig.build.json",
     "test": "vitest run",
-    "test:watch": "vitest watch"
+    "test:watch": "vitest watch",
+    "release": "release publish"
   },
   "keywords": [
     "http",
@@ -19,6 +20,7 @@
   "author": "Artem Zakharchenko <kettanaito@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@ossjs/release": "^0.8.0",
     "@types/node": "^20.8.0",
     "typescript": "^5.2.2",
     "vitest": "^0.34.6"
