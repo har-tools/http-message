@@ -37,6 +37,9 @@ jobs:
       - name: Unit tests
         run: pnpm test
 
+      - name: Build
+        run: pnpm build
+
       - name: Publish
         run: pnpm release
         env:
