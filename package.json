@@ -11,6 +11,9 @@
     "test:watch": "vitest watch",
     "release": "release publish"
   },
+  "files": [
+    "build"
+  ],
   "keywords": [
     "http",
     "message",
