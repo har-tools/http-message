@@ -1,6 +1,6 @@
 {
   "name": "@har-tools/http-message",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "JavaScript API to create an HTTP message from Fetch API requests/responses.",
   "type": "module",
   "main": "build/index.js",
