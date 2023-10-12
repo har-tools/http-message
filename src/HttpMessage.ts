@@ -97,12 +97,8 @@ export class HttpMessage {
   ) {
     const fetchHeaders = new Headers(this.rawHeaders)
 
-    this.encoding = (fetchHeaders.get('Content-Encoding') ||
-      undefined) as BufferEncoding
-
     this.mimeType = fetchHeaders.get('Content-Type') || ''
-    this.bodySize =
-      body == null ? 0 : Buffer.from(body, this.encoding).byteLength
+    this.bodySize = body == null ? 0 : Buffer.from(body).byteLength
 
     const headerLines = toHeaderLines(this.rawHeaders)
 
